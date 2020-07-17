@@ -16,20 +16,13 @@ class DbGoshuinData extends DBProvider {
 
   @override
   createDatabase(Database db, int version) async {
-          db.execute(
-            "CREATE TABLE $tableName(id TEXT PRIMARY KEY, shrineId TEXT, goshuinName TEXT, date TEXT, memo TEXT)",
-          );
-          db.execute(
-            "CREATE TABLE $tableName2(id TEXT PRIMARY KEY, shrineName TEXT,  prefectures TEXT,  prefecturesNo TEXT)",
-          );
-
+    db.execute(
+      "CREATE TABLE $tableName(id TEXT PRIMARY KEY, img TEXT, shrineId TEXT, goshuinName TEXT, date TEXT, memo TEXT)",
+    );
+    db.execute(
+      "CREATE TABLE $tableName2(shrineId TEXT PRIMARY KEY, shrineName TEXT,  prefectures TEXT,  prefecturesNo TEXT)",
+    );
   }
-//  createDatabase(Database db, int version) =>
-//      db.execute(
-//        "CREATE TABLE $tableName(id TEXT PRIMARY KEY, shisetsu TEXT, name TEXT, date TEXT, memo TEXT)",
-//      );
-
-
 
   /* データ登録 */
   Future<void> insertGoshuin(Goshuin goshuin) async {
@@ -45,31 +38,22 @@ class DbGoshuinData extends DBProvider {
   Future<List<Goshuin>> getGoshuins() async {
     final Database db = await database;
 //    final List<Map<String, dynamic>> maps = await db.query(tableName);
-    final List<Map<String, dynamic>> maps = await db.rawQuery('SELECT * FROM ' + tableName + ' ORDER BY id DESC');
+    final List<Map<String, dynamic>> maps =
+        await db.rawQuery('SELECT * FROM ' + tableName + ' ORDER BY id DESC');
     var list = new List<Goshuin>();
     var i = 0;
     for (Map map in maps) {
-      list.add(
-          Goshuin(
-            id: maps[i]['id'],
-            shrineId: maps[i]['shrineId'],
-            goshuinName: maps[i]['goshuinName'],
-            date: maps[i]['date'],
-            memo: maps[i]['memo'],
-          )
-      );
+      list.add(Goshuin(
+        id: maps[i]['id'],
+        img: maps[i]['img'],
+        shrineId: maps[i]['shrineId'],
+        goshuinName: maps[i]['goshuinName'],
+        date: maps[i]['date'],
+        memo: maps[i]['memo'],
+      ));
       i++;
     }
     return list;
-//    return List.generate(maps.length, (i) {
-//      return Goshuin(
-//        id: maps[i]['id'],
-//        shisetsu: maps[i]['shisetsu'],
-//        name: maps[i]['name'],
-//        date: maps[i]['date'],
-//        memo: maps[i]['memo'],
-//      );
-//    });
   }
 
   /* 更新 */
@@ -86,90 +70,183 @@ class DbGoshuinData extends DBProvider {
   }
 
   /* 削除 */
-  Future<void> deleteGoshuin(int id) async {
+  Future<void> deleteGoshuin(String id) async {
     final db = await database;
     await db.delete(
       tableName,
       where: "id = ?",
       whereArgs: [id],
     );
+    print("db_goshuin_data.dart★削除した");
   }
 
-  /* 最大IDレコード取得 */
-  Future<Goshuin> getMaxIdGoshuin() async {
-    final Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.rawQuery('SELECT * FROM ' + tableName + ' ORDER BY id DESC LIMIT 1');
-    var goshuin = new Goshuin();
-    var i = 0;
-    if(maps.length != 0) {
-      goshuin =
-          Goshuin(
-            id: maps[i]['id'],
-            shrineId: maps[i]['shrineId'],
-            goshuinName: maps[i]['goshuinName'],
-            date: maps[i]['date'],
-            memo: maps[i]['memo'],
-          );
+  /*
+  * 御朱印IDで1件取得
+  *
+  * prm:ID
+  * return：Goshuin
+  * */
+  Future<GoshuinList> getGoshuinId(String prmId) async {
+    print("db_goshuin_data.dart★御朱印IDで1件取得 start");
+    var goshuin = new GoshuinList();
+    print("prmId");
+    print(prmId);
+
+    if (prmId != null) {
+      final Database db = await database;
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+          'SELECT * FROM $tableName inner join $tableName2 on $tableName.shrineId = $tableName2.shrineId WHERE id = "' +
+              prmId +
+              '"');
+
+      var i = 0;
+      if (maps.length != 0) {
+        goshuin = GoshuinList(
+          id: maps[i]['id'],
+          img: maps[i]['img'],
+          shrineId: maps[i]['shrineId'],
+          shrineName: maps[i]['shrineName'],
+          goshuinName: maps[i]['goshuinName'],
+          date: maps[i]['date'],
+          prefectures: maps[i]['prefectures'],
+          memo: maps[i]['memo'],
+        );
+      }
     }
-    print("db_goshuin_data.dart★最大値取得");
-    print(goshuin);
+    print("db_goshuin_data.dart★御朱印IDで1件取得 end");
     return goshuin;
   }
 
-  /* レコード取得 */
+  /*
+  * 神社・寺院IDで取得
+  *
+  * prm:ID
+  * return：Goshuin
+  * */
+  Future<List<GoshuinList>> getGoshuinShrineId(String prmId) async {
+    print("db_goshuin_data.dart★神社・寺院IDで取得 start");
+    var list = new List<GoshuinList>();
+    if (prmId != null) {
+      final Database db = await database;
+      final List<Map<String, dynamic>> maps =
+          await db.rawQuery('SELECT * FROM $tableName WHERE shrineId = "' + prmId + '"');
+
+      var i = 0;
+      for (Map map in maps) {
+        list.add(GoshuinList(
+          id: maps[i]['id'],
+          img: maps[i]['img'],
+          shrineId: maps[i]['shrineId'],
+          shrineName: maps[i]['shrineName'],
+          goshuinName: maps[i]['goshuinName'],
+          date: maps[i]['date'],
+          prefectures: maps[i]['prefectures'],
+          memo: maps[i]['memo'],
+        ));
+        i++;
+      }
+    }
+
+    print("db_goshuin_data.dart★神社・寺院IDで取得 end");
+    return list;
+  }
+
+  /* 最大IDレコード取得 */
+  Future<GoshuinList> getMaxIdGoshuin() async {
+    final Database db = await database;
+    final List<Map<String, dynamic>> maps = await db
+        .rawQuery('SELECT * FROM ' + tableName + ' ORDER BY id DESC LIMIT 1');
+    var goshuin = new GoshuinList();
+    var i = 0;
+    if (maps.length != 0) {
+      goshuin = GoshuinList(
+        id: maps[i]['id'],
+        img: maps[i]['img'],
+        shrineId: maps[i]['shrineId'],
+        shrineName: maps[i]['shrineName'],
+        goshuinName: maps[i]['goshuinName'],
+        date: maps[i]['date'],
+        prefectures: maps[i]['prefectures'],
+        memo: maps[i]['memo'],
+      );
+    }
+    print("db_goshuin_data.dart★最大値取得");
+    return goshuin;
+  }
+
+  /* レコード取得
+  *　ID降順
+  * */
   Future<List<GoshuinList>> getGoshuinList() async {
     final Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.rawQuery('SELECT * FROM $tableName inner join $tableName2 on shrineId = $tableName2.id ORDER BY $tableName.id DESC ');
+    final List<Map<String, dynamic>> maps = await db.rawQuery(
+        'SELECT * FROM $tableName inner join $tableName2 on $tableName.shrineId = $tableName2.shrineId ORDER BY $tableName.id DESC ');
     var list = new List<GoshuinList>();
     var i = 0;
     for (Map map in maps) {
-      list.add(
-          GoshuinList(
-            id: maps[i]['id'],
-            shrineName: maps[i]['shrineName'],
-            goshuinName: maps[i]['goshuinName'],
-            date: maps[i]['date'],
-            prefectures: maps[i]['prefectures'],
-          )
-      );
+      list.add(GoshuinList(
+        id: maps[i]['id'],
+        img: maps[i]['img'],
+        shrineId: maps[i]['shrineId'],
+        shrineName: maps[i]['shrineName'],
+        goshuinName: maps[i]['goshuinName'],
+        date: maps[i]['date'],
+        prefectures: maps[i]['prefectures'],
+        memo: maps[i]['memo'],
+      ));
       i++;
     }
-    print("db_goshuin_data.dart★結合一覧");
-    print(list);
+    print("db_goshuin_data.dart★結合一覧　ID昇順");
     return list;
   }
-  /* 最大IDレコード取得 */
-//  Future<Goshuin> getMaxIdGoshuin() async {
-//    final Database db = await database;
-//    final List<Map<String, dynamic>> maps = await db.rawQuery('SELECT * FROM ' + tableName + ' ORDER BY id DESC LIMIT 1');
-//    var goshuin = new Goshuin();
-//    var i = 0;
-//    goshuin =
-//        Goshuin(
-//          id: maps[i]['id'],
-//          shisetsu: maps[i]['shisetsu'],
-//          name: maps[i]['name'],
-//          date: maps[i]['date'],
-//          memo: maps[i]['memo'],
-//        );
-//    print("★最大値取得");
-//    print(goshuin);
-//    return goshuin;
-//  }
+
+  /* レコード取得
+  *　神社ID昇順
+  * */
+  Future<List<GoshuinList>> getAscshrineIdGoshuinList() async {
+    final Database db = await database;
+    final List<Map<String, dynamic>> maps = await db
+        .rawQuery('SELECT * FROM ' + tableName + ' ORDER BY shrineId ASC');
+    var list = new List<GoshuinList>();
+    var i = 0;
+    for (Map map in maps) {
+      list.add(GoshuinList(
+        id: maps[i]['id'],
+        img: maps[i]['img'],
+        shrineId: maps[i]['shrineId'],
+        shrineName: maps[i]['shrineName'],
+        goshuinName: maps[i]['goshuinName'],
+        date: maps[i]['date'],
+        prefectures: maps[i]['prefectures'],
+        memo: maps[i]['memo'],
+      ));
+      i++;
+    }
+    print("db_goshuin_data.dart★結合一覧　神社ID昇順");
+    return list;
+  }
 }
 
 class Goshuin {
-  final String id;       // [GSI+連番6桁（GSI000001）]
-  final String shrineId; // 神社・寺院ID
-  final String goshuinName;     // 御朱印名
-  final String date;     // 参拝日
-  final String memo;     // メモ
+  final String id; // [GSI+連番6桁（GSI000001）]
+  final String img; // 画像(base64)
+  final String shrineId; // 神社・寺院ID [都道府県番号-都道府県番号内の連番5桁（03-00001）]
+  final String goshuinName; // 御朱印名
+  final String date; // 参拝日
+  final String memo; // メモ
 
-  Goshuin({this.id, this.shrineId, this.goshuinName, this.date, this.memo});
+  Goshuin(
+      {this.id,
+      this.img,
+      this.shrineId,
+      this.goshuinName,
+      this.date,
+      this.memo});
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'img': img,
       'shrineId': shrineId,
       'goshuinName': goshuinName,
       'date': date,
@@ -179,31 +256,45 @@ class Goshuin {
 
   @override
   String toString() {
-    return 'Goshuin{id: $id, shrineId: $shrineId, goshuinName: $goshuinName, date: $date, memo: $memo}';
+    return 'Goshuin{id: $id, img: $img, shrineId: $shrineId, goshuinName: $goshuinName, date: $date, memo: $memo}';
   }
 }
 
 class GoshuinList {
-  final String id;              // [GSI+連番6桁（GSI000001）]
-  final String shrineName;        // 神社・寺院ID
-  final String goshuinName;     // 御朱印名
-  final String date;            // 参拝日
-  final String prefectures;     // 都道府県
+  final String id; // [GSI+連番6桁（GSI000001）]
+  final String img; // 画像(base64)
+  final String shrineId; // 神社・寺院ID [都道府県番号-都道府県番号内の連番5桁（03-00001）]
+  final String shrineName; // 神社・寺院名
+  final String goshuinName; // 御朱印名
+  final String date; // 参拝日
+  final String prefectures; // 都道府県
+  final String memo; // メモ
 
-  GoshuinList({this.id, this.shrineName, this.goshuinName, this.date, this.prefectures});
+  GoshuinList(
+      {this.id,
+      this.img,
+      this.shrineId,
+      this.shrineName,
+      this.goshuinName,
+      this.date,
+      this.prefectures,
+      this.memo});
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'img': img,
+      'img': shrineId,
       'shrineName': shrineName,
       'goshuinName': goshuinName,
       'date': date,
       'prefectures': prefectures,
+      'memo': memo,
     };
   }
 
   @override
   String toString() {
-    return 'Goshuin{id: $id, shrineName: $shrineName, goshuinName: $goshuinName, date: $date, prefectures: $prefectures}';
+    return 'Goshuin{id: $id, img: $img, shrineId: $shrineId, shrineName: $shrineName, goshuinName: $goshuinName, date: $date, prefectures: $prefectures, memo: $memo}';
   }
 }

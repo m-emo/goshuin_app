@@ -2,10 +2,11 @@
 
 import 'footer.dart';
 import 'add.dart';
+import 'jinjaList.dart';
 import 'list.dart';
 import 'photo.dart';
 import 'addJinja.dart';
-import 'prefecturesList.dart';
+import 'listJinjabetsu.dart';
 import 'package:flutter/material.dart';
 
 void main() => runApp(MyApp());
@@ -15,16 +16,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
+        primarySwatch: Colors.red,
       ),
       home: MyHomePage(),
       // ルート名と表示するウィジェットのビルド関数を定義
       routes: <String, WidgetBuilder>{
-        '/my-page-1': (BuildContext context) => new MyHomePage(),
-        '/my-page-2': (BuildContext context) => new MyPage2(),
-        '/addContents': (BuildContext context) => new AddContents(),
-        '/my-page-4': (BuildContext context) => new PhotoContents(),
-        '/addJinja': (BuildContext context) => new AddJinja(),
+        '/home': (BuildContext context) => new MyHomePage(),
+        '/addContents': (BuildContext context) => new AddContents(id: "", kbn: "0"),
+//        '/my-page-4': (BuildContext context) => new PhotoContents(),
+        '/addJinja': (BuildContext context) => new AddJinja(kbn : "1", id: ""),
+        '/listJinjabetsu': (BuildContext context) => new ListJinjabetsu(),
+        '/JinjaList': (BuildContext context) => new JinjaList(kbn : "1"), // 神社・寺社一覧
       },
     );
   }
@@ -44,13 +46,14 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   TextEditingController _controller = TextEditingController();
-  final List<TodoItem> _items = List();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final List<TabInfo> _tabs = [
     TabInfo("一覧", ListContents()),
-    TabInfo("てすと", AddJinja()),
+    TabInfo("神社・寺院", ListJinjabetsu()),
     TabInfo("写真", PhotoContents()),
-    TabInfo("てすと", Prefectures()),
   ];
+
+  var _city = '';
 
   @override
   void dispose() {
@@ -63,251 +66,86 @@ class _MyHomePageState extends State<MyHomePage> {
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Todo App',
-            style: TextStyle(
-              color: Colors.black54,
+        key: _scaffoldKey,
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(80.0),
+          child: AppBar(
+            title: Image(// Imageウィジェット
+                image: AssetImage('assets/img/logo.png',),
+              height: 18,
             ),
+            leading: IconButton(
+              icon: Icon(Icons.dehaze),
+              color: Color(0xFF707070),
+              padding: new EdgeInsets.all(15.0),
+              onPressed: () {
+                _scaffoldKey.currentState.openDrawer();
+              },
+            ),
+            centerTitle: true,
+            backgroundColor: Colors.white,
+            bottom: TabBar(
+//              isScrollable: true,
+                indicatorColor: Color(0xFFE75331),
+                labelColor: Color(0xFF707070),
+                unselectedLabelColor: Color(0xFF707070).withOpacity(0.3),
+                labelStyle: TextStyle(fontSize: 14.0),
+                tabs: _tabs.map((TabInfo tab) {
+                  return Container(height: 30.0,child:Tab(text: tab.label),);
+                }).toList(),
+              ),
+//            bottom: PreferredSize(
+//              child: TabBar(
+////              isScrollable: true,
+//                indicatorColor: Color(0xFFE75331),
+//                labelColor: Color(0xFF707070),
+//                unselectedLabelColor: Color(0xFF707070).withOpacity(0.3),
+//                labelStyle: TextStyle(fontSize: 14.0),
+//                tabs: _tabs.map((TabInfo tab) {
+//                  return Container(height: 20.0,child:Tab(text: tab.label),);
+//                }).toList(),
+//              ),
+//              preferredSize: Size.fromHeight(10.0),
+//            ),
           ),
-          centerTitle: true,
-          backgroundColor: Colors.white,
-          bottom: PreferredSize(
-            child: TabBar(
-              isScrollable: true,
-              labelColor: Colors.black54,
-              unselectedLabelColor: Colors.black54.withOpacity(0.3),
-              labelStyle: TextStyle(fontSize: 16.0),
-              tabs: _tabs.map((TabInfo tab) {
-                return Tab(text: tab.label);
-              }).toList(),
-            ),
-            preferredSize: Size.fromHeight(30.0),
+        ),
+
+        drawer: Drawer(
+          child: ListView(
+            children: <Widget>[
+              DrawerHeader(
+                child: Text(
+                  'My App',
+                  style: TextStyle(
+                    fontSize: 24,
+                    color: Colors.white,
+                  ),
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                ),
+              ),
+              ListTile(
+                title: Text('神社・寺院'),
+                onTap: () {
+                  setState(() => _city = 'Los Angeles, CA');
+                  Navigator.pushNamed(context, '/JinjaList');
+                },
+              ),
+              ListTile(
+                title: Text('このアプリについて'),
+                onTap: () {
+                  setState(() => _city = 'Honolulu, HI');
+                  Navigator.pop(context);
+                },
+              ),
+            ],
           ),
         ),
         body: TabBarView(children: _tabs.map((tab) => tab.widget).toList()),
         // フッター
         bottomNavigationBar: Footer(),
       ),
-    );
-  }
-
-/*@override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Todo App',
-            style: TextStyle(
-              color: Colors.black54,
-            ),
-          ),
-          centerTitle: true,
-          backgroundColor: Colors.white,
-        ),
-        body: Column(
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  flex: 3,
-                  child: TextField(
-                    controller: _controller,
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: RaisedButton(
-                    child: Text("追加"),
-                    color: Colors.orange[600],
-                    textColor: Colors.white,
-                    onPressed: () {
-                      setState(() {
-                        _items.add(TodoItem(
-                          content: _controller.text,
-                        ));
-                        _controller.clear();
-                      });
-                    },
-                  ),
-                )
-              ],
-            ),
-            Expanded(
-              child: Column(
-                children: _items,
-              ),
-            ),
-          ],
-        ),
-        // フッター
-        bottomNavigationBar: Footer());
-  }
-  */
-}
-
-class TodoItem extends StatelessWidget {
-  final String content;
-
-  TodoItem({@required this.content});
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: BoxConstraints.expand(height: 50.0),
-      child: Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Colors.lightBlue[200]))),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              flex: 3,
-              child: Center(
-                child: Text(content,
-                    style: TextStyle(
-                      fontSize: 18.0,
-                    )),
-              ),
-            ),
-            Expanded(
-              flex: 1,
-              child: RaisedButton(
-                child: Text("移動"),
-                color: Colors.orange[600],
-                textColor: Colors.white,
-                onPressed: () {
-                  Navigator.pushNamed(context, '/my-page-2');
-                },
-              ),
-            ),
-          ],
-        ),
-
-//        child: Center(
-//          child: Text(
-//              content,
-//              style: TextStyle(
-//                fontSize: 18.0,
-//              )
-//          ),
-//        ),
-      ),
-    );
-  }
-}
-
-// 遷移先のページ
-class MyPage2 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('MyPage 2')),
-      body: ListView.builder(
-        itemBuilder: (BuildContext context, int index) {
-          return Container(
-            decoration: BoxDecoration(
-                border:
-                Border(bottom: BorderSide(color: Colors.lightBlue[200]))),
-            height: 100.0,
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  flex: 2,
-                  child: Center(
-                    child: Text('$index',
-                        style: TextStyle(
-                          fontSize: 18.0,
-                        )),
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Container(
-                        child: Text('テストテスト',
-                            style: TextStyle(
-                              fontSize: 18.0,
-                            )),
-                      ),
-                      Container(
-                        child: Text('テストテスト',
-                            style: TextStyle(
-                              fontSize: 18.0,
-                            )),
-                      ),
-                      Container(
-                        child: Text('[テストテスト]',
-                            style:
-                            TextStyle(fontSize: 12.0, color: Colors.grey)),
-                      ),
-                      Container(
-                        child: Text('2020.10.10',
-                            style:
-                            TextStyle(fontSize: 12.0, color: Colors.grey)),
-                      ),
-                    ],
-                  ),
-                )
-              ],
-            ),
-          );
-//          return Card(
-//            child: Padding(
-//              child: Text(
-//                '$index',
-//                style: TextStyle(fontSize: 22.0),
-//              ),
-//              padding: EdgeInsets.all(20.0),
-//            ),
-//          );
-        },
-        itemCount: 10,
-      ),
-    );
-  }
-}
-
-
-//class Page2 extends StatelessWidget {
-//  @override
-//  Widget build(BuildContext context) {
-//    return Column(
-//      children: <Widget>[
-//        Container(
-//          padding: EdgeInsets.all(10.0),
-//          child: Text("2"),
-//        )
-//      ],
-//    );
-//  }
-//}
-
-class Page3 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        Container(
-          padding: EdgeInsets.all(10.0),
-          child: Text("3"),
-        )
-      ],
-    );
-  }
-}
-
-class Page4 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        Container(
-          padding: EdgeInsets.all(10.0),
-          child: Text("4"),
-        )
-      ],
     );
   }
 }

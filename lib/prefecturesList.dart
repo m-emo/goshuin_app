@@ -58,7 +58,7 @@ class Prefectures extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         leading: new IconButton(
-          icon: new Icon(Icons.arrow_back_ios, color: Colors.black54),
+          icon: backIcon,
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(

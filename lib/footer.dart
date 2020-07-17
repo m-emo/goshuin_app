@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class Footer extends StatefulWidget {
   const Footer();
@@ -15,12 +16,12 @@ class _Footer extends State<Footer> {
     return BottomNavigationBar(
       items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.collections),
-          title: Text('Contacts'),
+          icon: FaIcon(FontAwesomeIcons.toriiGate),
+          title: Text('御朱印'),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.add_circle_outline),
-          title: Text('御朱印登録'),
+          icon: FaIcon(FontAwesomeIcons.cameraRetro),
+          title: Text('登録'),
         ),
       ],
       onTap: (int index) {

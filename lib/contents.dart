@@ -1,262 +1,238 @@
+import 'package:flutter/cupertino.dart';
+
+import 'add.dart';
+import 'main.dart';
 import 'style.dart';
-import 'jinjaList.dart';
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'package:intl/intl.dart';
+import 'db_goshuin_data.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
-/*class AddContents extends StatefulWidget {
-  const AddContents();
-
-  @override
-  _AddContents createState() => _AddContents();
-}*/
+enum Menu { goshuin_update, goshuin_delete }
 
 class Contents extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: new IconButton(
-          icon: new Icon(Icons.arrow_back_ios, color: Colors.black54),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          '詳細',
-          style: appBarTextStyle,
-        ),
-        backgroundColor: Colors.white,
-        centerTitle: true,
-      ),
-      backgroundColor: Color(0xFFEAEAEA),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisAlignment: MainAxisAlignment.start,
-        mainAxisSize: MainAxisSize.max,
-        children: <Widget>[
-          PlaceArea(),
-          _nameArea(),
-          SelectDateArea(),
-          _memoArea(),
-        ],
-      ),
-      /*
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisAlignment: MainAxisAlignment.start,
-        mainAxisSize: MainAxisSize.max,
-        children: <Widget>[
-          PlaceArea(),
-          _nameArea(),
-          SelectDateArea(),
-          _memoArea(),
-        ],
-      ),
-*/
-    );
-  }
-}
+  // 引数取得
+  final String id;
 
-//施設Widget
-class PlaceArea extends StatefulWidget {
-  @override
-  //_PlaceArea createState() => _PlaceArea();
-  State<StatefulWidget> createState() {
-    return _PlaceArea();
-  }
-}
-
-class _PlaceArea extends State<PlaceArea> {
-  var _place = '選択してください';
-  var _prefectures = '';
+  Contents({Key key, this.id}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      margin: const EdgeInsets.only(top: 4.0),
-      padding: const EdgeInsets.only(
-          top: 15.0, right: 20.0, bottom: 15.0, left: 20.0),
-      child: InkWell(
-        onTap: () => _navigateAndDisplaySelection(context),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              flex: 11,
-              child: Container(
-                padding: const EdgeInsets.only(right: 20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Container(
-                      color: Colors.blue,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Container(
-                            child: AddTitle(title1: "施設"),
-                          ),
-                          Container(
-                            child: Text("${_prefectures}"),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      color: Colors.lime,
-                      padding: const EdgeInsets.only(top: 15.0),
-                      child: Text("${_place}"),
+    final Size size = MediaQuery.of(context).size;
+
+    // ページ遷移
+    void _pushPage(BuildContext context, Widget page) {
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+    }
+
+    // キャンセル確認ダイアログ
+    void _pushDialog(BuildContext context) {
+      showDialog<int>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('削除する'),
+            content: Text('本当に削除してもよろしいですか'),
+            actions: <Widget>[
+              FlatButton(
+                child: Text('キャンセル'),
+                onPressed: () => Navigator.of(context).pop(0),
+              ),
+              FlatButton(
+                child: Text('OK'),
+                onPressed: () async{
+                  // 削除する
+                  await DbGoshuinData().deleteGoshuin(id);
+                  // 一覧にもどる
+                  _pushPage(context, MyApp());
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    // 右上メニュー遷移
+    void popupMenuSelected(Menu selectedMenu) {
+      switch (selectedMenu) {
+        case Menu.goshuin_update:
+          _pushPage(context, AddContents(id: id, kbn: "1"));
+          break;
+        case Menu.goshuin_delete:
+          _pushDialog(context);
+          break;
+        default:
+          break;
+      }
+    }
+
+    return FutureBuilder(
+      future: DbGoshuinData().getGoshuinId(id),
+      builder: (BuildContext context, AsyncSnapshot<GoshuinList> getGoshuin) {
+        var goshuin = getGoshuin.data;
+        print("★contents.dart 詳細表示");
+
+
+
+
+        if (getGoshuin.hasData) {
+          // 画像取得
+          String base64Image = goshuin.img; // 画像(base64)
+          // 画像に戻す
+          Uint8List bytesImage = Base64Decoder().convert(base64Image);
+
+          return Scaffold(
+            appBar: AppBar(
+              leading: new IconButton(
+                icon: backIcon,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: Text(
+                goshuin.shrineName,
+                style: appBarTextStyle,
+              ),
+              actions: <Widget>[
+                PopupMenuButton(
+                  icon: moreVertIcon,
+                  onSelected: popupMenuSelected,
+                  itemBuilder: (BuildContext context) => <PopupMenuEntry<Menu>>[
+                    const PopupMenuItem(
+                        child: const ListTile(
+                            leading: Icon(Icons.brush),
+                            title: Text(
+                              "編集する",
+                              style: TextStyle(
+                                color: Color(0xFF707070),
+                                letterSpacing: 0.5,
+                                fontSize: 16.0,
+                              ),
+                            )),
+                        value: Menu.goshuin_update),
+                    const PopupMenuItem(
+                      child: const ListTile(
+                          leading: Icon(Icons.delete),
+                          title: Text(
+                            "削除",
+                            style:  TextStyle(
+                              color: Color(0xFF707070),
+                              letterSpacing: 0.5,
+                              fontSize: 16.0,
+                            ),
+                          )),
+                      value: Menu.goshuin_delete,
                     ),
                   ],
                 ),
-              ),
+              ],
+              backgroundColor: Colors.white,
+              centerTitle: true,
             ),
-            Expanded(
-              flex: 1,
-              child: Icon(Icons.arrow_forward_ios),
-//              child: Container(
-//                color: Colors.red,
-//                child: Icon(Icons.arrow_forward_ios),
-//              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 選択値受取
-  void _navigateAndDisplaySelection(BuildContext context) async {
-    final result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => JinjaList(),
-        ));
-    var place = result[0]; // 場所
-    var prefectures = "[ " + result[1] + " ]"; // 都道府県
-
-    setState(() {
-      _place = place;
-      _prefectures = prefectures;
-    });
-  }
-}
-
-//名前Widget
-Widget _nameArea() {
-  return Container(
-    color: Colors.white,
-    margin: const EdgeInsets.only(top: 4.0),
-    padding:
-    const EdgeInsets.only(top: 15.0, right: 20.0, bottom: 15.0, left: 20.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Container(
-          child: AddTitle(title1: "名前"),
-        ),
-        Container(
-          padding: const EdgeInsets.only(top: 5.0),
-          child: TextField(
-            style: mainTextStyle,
-            decoration: new InputDecoration.collapsed(
-              border: InputBorder.none,
-              hintText: '入力してください',
-              hintStyle: TextStyle(fontSize: 14.0, color: Colors.black12),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-// 日付Widget
-class SelectDateArea extends StatefulWidget {
-  @override
-  State<StatefulWidget> createState() {
-    return _State();
-  }
-}
-
-class _State extends State<SelectDateArea> {
-  var _labelText = '選択してください';
-  DateTime _date = new DateTime.now();
-  var formatter = new DateFormat('yyyy/MM/dd');
-
-  Future<Null> _selectDate(BuildContext context) async {
-    final DateTime picked = await showDatePicker(
-        context: context,
-        initialDate: DateTime.now(),
-        firstDate: new DateTime(1950),
-        lastDate: new DateTime.now().add(new Duration(days: 360)));
-    if (picked != null) setState(() => _labelText = formatter.format(picked));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => _selectDate(context),
-      child: Container(
-        color: Colors.white,
-        margin: const EdgeInsets.only(top: 20.0),
-        padding: const EdgeInsets.only(
-            top: 15.0, right: 20.0, bottom: 15.0, left: 20.0),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              flex: 1,
-              child: AddTitle(title1: "日付"),
-            ),
-            Expanded(
-              flex: 3,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+            backgroundColor: Colors.white,
+            body: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisSize: MainAxisSize.max,
                 children: <Widget>[
-                  Text(
-                    "${_labelText}",
-                    style: mainTextStyle,
-                  ),
-                  Container(
-                    padding: const EdgeInsets.only(left: 20.0),
-                    child: Icon(Icons.date_range),
-                  ),
-//                  IconButton(
-//                    icon: Icon(Icons.date_range),
-//                    onPressed: () => _selectDate(context),
-//                  )
+                  _imagePickerView(size, bytesImage),
+                  _placeArea(goshuin.shrineName, goshuin.date,
+                      goshuin.prefectures, goshuin.goshuinName),
+                  _memoArea(goshuin.memo),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+          );
+        } else {
+          return Text("データが存在しません");
+        }
+      },
     );
   }
 }
 
-// メモWidget
-Widget _memoArea() {
+/*
+prm: Size size (画面サイズ)
+     Uint8List bytesImage (画像)
+ */
+Widget _imagePickerView(Size size, Uint8List bytesImage) {
+  return Container(
+      height: size.width,
+      width: size.width,
+      color: bgImgcolor,
+      child: bytesImage == null
+          ? new Text('No image value.')
+          : Image.memory(
+              bytesImage,
+            ));
+}
+
+/*
+prm: String jinjaName (神社・寺院名)
+     String data (参拝日)
+     String prefectures (都道府県)
+     String goshuinName (御朱印名)
+ */
+Widget _placeArea(
+    String jinjaName, String date, String prefectures, String goshuinName) {
   return Container(
     color: Colors.white,
-    margin: const EdgeInsets.only(top: 4.0),
     padding:
-    const EdgeInsets.only(top: 15.0, right: 20.0, bottom: 15.0, left: 20.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+        const EdgeInsets.only(top: 30.0, right: 20.0, bottom: 30.0, left: 20.0),
+    child: Row(
       children: <Widget>[
-        Container(
-          child: AddTitle(title1: "メモ"),
-        ),
-        Container(
-          padding: const EdgeInsets.only(top: 10.0),
-          child: TextField(
-            keyboardType: TextInputType.multiline,
-            maxLines: null,
-            style: mainTextStyle,
-            decoration: new InputDecoration.collapsed(
-              border: InputBorder.none,
-              hintText: '入力してください',
-              hintStyle: TextStyle(fontSize: 14.0, color: Colors.black12),
+        Expanded(
+          flex: 11,
+          child: Container(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Container(
+                  child: Text(
+                    date, // 参拝日
+                    style: mainTextStyle,
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.only(top: 5.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        flex: 6,
+                        child: Container(
+                          child: Text(
+                            jinjaName,
+                            // 神社・寺院名
+                            style: mainTextStyleBold,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          padding: EdgeInsets.only(left: 10.0),
+                          child: Text(
+                            "[ " + prefectures + " ]", // 都道府県名
+                            style: mainTextStyleSmall,
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.only(top: 15.0),
+                  child: Text(
+                    goshuinName,
+                    // 御朱印名
+                    style: mainTextStyle,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -265,16 +241,31 @@ Widget _memoArea() {
   );
 }
 
-// 見出し
-class AddTitle extends StatelessWidget {
-  final String title1; // 引数
-  AddTitle({@required this.title1});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title1,
-      style: mainTextStyleBold,
+/*
+prm: String memo (メモ)
+ */
+Widget _memoArea(String memo) {
+  if (memo != null && memo != "") {
+    return Container(
+      color: Colors.white,
+      margin: const EdgeInsets.only(right: 20.0, bottom: 30.0, left: 20.0),
+      child: Container(
+        padding: const EdgeInsets.only(top: 30.0),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: Color(0xFFF5F5F5),
+              width: 2.0,
+            ),
+          ),
+        ),
+        child: Text(
+          memo,
+          style: mainTextStyle,
+        ),
+      ),
     );
+  } else {
+    return Container();
   }
 }
